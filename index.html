@@ -5,24 +5,24 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <meta name="theme-color" content="#0b57d0">
   <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <title>Caixa d'água</title>
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" type="image/png" href="https://cdn-icons-png.flaticon.com/512/3105/3105807.png">
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
     body { background-color: #f0f4f9; color: #1e293b; padding-bottom: 75px; user-select: none; }
     
-    /* Cabeçalho */
     header { background: linear-gradient(180deg, #0b57d0 0%, #1665d8 100%); color: white; padding: 16px 20px; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 100; box-shadow: 0 2px 8px rgba(0,0,0,0.15); }
     .header-left { display: flex; align-items: center; gap: 16px; }
     header h1 { font-size: 20px; font-weight: 600; letter-spacing: 0.2px; }
     .icon-btn { background: none; border: none; color: white; font-size: 22px; cursor: pointer; display: flex; align-items: center; justify-content: center; padding: 4px; }
     .ble-active { color: #4ade80 !important; filter: drop-shadow(0 0 6px rgba(74,222,128,0.8)); }
 
-    /* Contentor e Cartões */
     .container { padding: 14px; max-width: 480px; margin: 0 auto; display: flex; flex-direction: column; gap: 14px; }
     .card { background: #ffffff; border-radius: 18px; padding: 18px; box-shadow: 0 2px 10px rgba(15, 23, 42, 0.05); }
 
-    /* Cartão Nível Atual */
     .top-grid { display: grid; grid-template-columns: 1.25fr 1fr; align-items: center; }
     .level-col { border-right: 1px solid #e2e8f0; padding-right: 12px; }
     .label-muted { font-size: 16px; font-weight: 600; color: #475569; margin-bottom: 2px; }
@@ -38,7 +38,6 @@
     .trend-liters { font-size: 18px; font-weight: 800; color: #0f172a; }
     .trend-caption { font-size: 12px; color: #64748b; margin-top: 2px; }
 
-    /* Cartão Consumo e Gráfico */
     .card-header { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; margin-bottom: 8px; }
     .card-title { display: flex; align-items: center; gap: 8px; font-size: 15px; font-weight: 700; color: #0f172a; }
     .pills { display: flex; gap: 4px; }
@@ -49,7 +48,6 @@
     .consumption-period { font-size: 13px; color: #475569; margin: 4px 0 12px 0; }
     .chart-box { height: 150px; width: 100%; }
 
-    /* Tabela Leituras Recentes */
     .freq-badge { font-size: 12px; color: #475569; font-weight: 500; }
     table { width: 100%; border-collapse: collapse; margin-top: 8px; font-size: 13px; text-align: center; }
     th { background: #f1f5f9; color: #334155; font-weight: 600; padding: 8px 4px; font-size: 11.5px; border-bottom: 1px solid #e2e8f0; }
@@ -59,16 +57,13 @@
     .var-down { color: #dc2626; font-weight: 700; }
     .var-zero { color: #64748b; }
 
-    /* Alerta Banner */
     #alertBanner { display: none; background: #fee2e2; border-left: 5px solid #dc2626; color: #991b1b; padding: 12px 16px; border-radius: 12px; font-size: 14px; font-weight: 600; align-items: center; justify-content: space-between; }
 
-    /* Barra de Navegação Inferior */
     .bottom-nav { position: fixed; bottom: 0; left: 0; right: 0; height: 64px; background: white; display: flex; justify-content: space-around; align-items: center; border-top: 1px solid #e2e8f0; z-index: 100; }
     .nav-item { display: flex; flex-direction: column; align-items: center; gap: 4px; color: #64748b; font-size: 12px; font-weight: 600; cursor: pointer; background: none; border: none; width: 50%; height: 100%; justify-content: center; position: relative; }
     .nav-item.active { color: #0b57d0; }
     .nav-item.active::after { content: ""; position: absolute; bottom: 0; width: 65%; height: 3px; background: #0b57d0; border-radius: 3px 3px 0 0; }
 
-    /* Modal de Configurações */
     #settingsModal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 200; align-items: center; justify-content: center; padding: 16px; }
     .modal-content { background: white; width: 100%; max-width: 400px; border-radius: 18px; padding: 20px; display: flex; flex-direction: column; gap: 12px; }
     .modal-content input { width: 100%; padding: 10px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 14px; }
@@ -89,13 +84,11 @@
   </header>
 
   <div class="container">
-    <!-- Banner de Alerta Crítico (70%, 50%, 30%) -->
     <div id="alertBanner">
       <span id="alertText">⚠️ Alerta de Volume!</span>
       <button onclick="document.getElementById('alertBanner').style.display='none'" style="background:none;border:none;font-weight:bold;color:#991b1b;font-size:16px;">✕</button>
     </div>
 
-    <!-- Cartão 1: Nível Atual -->
     <div class="card">
       <div class="top-grid">
         <div class="level-col">
@@ -114,7 +107,6 @@
       </div>
     </div>
 
-    <!-- Cartão 2: Consumo no Período -->
     <div class="card">
       <div class="card-header">
         <div class="card-title">📊 Consumo no Período</div>
@@ -132,7 +124,6 @@
       </div>
     </div>
 
-    <!-- Cartão 3: Leituras Recentes -->
     <div class="card">
       <div class="card-header">
         <div class="card-title">🕒 Leituras Recentes</div>
@@ -159,7 +150,6 @@
     </div>
   </div>
 
-  <!-- Navegação Inferior -->
   <nav class="bottom-nav">
     <button class="nav-item active" onclick="closeSettings()">
       <span style="font-size:20px;">🏠</span>
@@ -171,7 +161,6 @@
     </button>
   </nav>
 
-  <!-- Modal de Configurações (URL do Apps Script e Capacidade) -->
   <div id="settingsModal">
     <div class="modal-content">
       <h3>Configurações do Sistema</h3>
@@ -186,7 +175,13 @@
   </div>
 
   <script>
-    // Configurações padrão (salvas no telemóvel via localStorage)
+    // Registra o Service Worker para liberar o APK no PWABuilder
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('./sw.js').catch(() => {});
+      });
+    }
+
     let API_URL = localStorage.getItem('api_url') || "https://script.google.com/macros/s/SEU_NOVO_ID/exec";
     let MAX_LITERS = parseFloat(localStorage.getItem('max_liters') || 1000);
     let MAX_CM = parseFloat(localStorage.getItem('max_cm') || 100);
@@ -197,7 +192,6 @@
     document.getElementById('maxLitersInput').value = MAX_LITERS;
     document.getElementById('maxCmInput').value = MAX_CM;
 
-    // 1. Inicializar Gráfico idêntico à imagem
     function initChart(labels = ['08h', '10h', '12h', '14h'], values = [62, 85, 74, 94.6]) {
       const ctx = document.getElementById('consumptionChart').getContext('2d');
       const gradient = ctx.createLinearGradient(0, 0, 0, 140);
@@ -232,7 +226,6 @@
       });
     }
 
-    // 2. Sistema de Alertas (70%, 50% e 30%) com som e Notificação Android
     function playBeep() {
       try {
         const ctx = new (window.AudioContext || window.webkitAudioContext)();
@@ -266,12 +259,11 @@
             new Notification("Alerta da Caixa d'Água", { body: msg });
           }
         } else if (pct > limit + 3) {
-          triggeredAlerts.delete(limit); // Rearma se o nível voltar a subir
+          triggeredAlerts.delete(limit);
         }
       });
     }
 
-    // 3. Atualizar ecrã com novos valores
     function updateDisplay(cm, liters, pct) {
       document.getElementById('lvlPct').innerHTML = `${pct.toFixed(1).replace('.', ',')}<span>%</span>`;
       document.getElementById('lvlSub').innerText = `${cm.toFixed(1).replace('.', ',')} cm • ${Math.round(liters)} L`;
@@ -279,14 +271,11 @@
       checkVolumeAlerts(pct);
     }
 
-    // 4. Buscar dados do Google Apps Script (JSON)
     async function fetchSheetData() {
       if (API_URL.includes("SEU_NOVO_ID")) return;
       try {
         const res = await fetch(API_URL);
         const data = await res.json();
-
-        // Suporta formato { altura: 94.6, volume: 946, nivel: 94.6, historico: [...] } ou Array direto da folha
         const rows = Array.isArray(data) ? data : (data.historico || data.readings || []);
         if (rows.length > 0) {
           const latest = rows[0];
@@ -295,14 +284,30 @@
           const pct = parseFloat(latest.nivel || latest.percentual || (liters / MAX_LITERS) * 100);
           updateDisplay(cm, liters, pct);
 
-          // Renderizar tabela das últimas 5 leituras
+          // Atualiza tendência das últimas 3 leituras
+          if (rows.length >= 3) {
+            const l0 = parseFloat(rows[0].volume || rows[0].litros || (parseFloat(rows[0].altura || 0) / MAX_CM) * MAX_LITERS);
+            const l2 = parseFloat(rows[2].volume || rows[2].litros || (parseFloat(rows[2].altura || 0) / MAX_CM) * MAX_LITERS);
+            const delta3 = +(l0 - l2).toFixed(1);
+            const badge = document.getElementById('trendBadge');
+            if (delta3 >= 0) {
+              badge.className = 'trend-badge';
+              badge.innerHTML = '📈 <span id="trendStatus">Subindo</span>';
+              document.getElementById('trendDelta').innerText = `+${String(delta3).replace('.', ',')} L`;
+            } else {
+              badge.className = 'trend-badge down';
+              badge.innerHTML = '📉 <span id="trendStatus">Descendo</span>';
+              document.getElementById('trendDelta').innerText = `${String(delta3).replace('.', ',')} L`;
+            }
+          }
+
           const tbody = document.getElementById('readingsBody');
           tbody.innerHTML = '';
           rows.slice(0, 5).forEach((r, idx) => {
             const rCm = parseFloat(r.altura || r.cm || 0);
             const rLit = parseFloat(r.volume || r.litros || (rCm / MAX_CM) * MAX_LITERS);
             const rPct = parseFloat(r.nivel || r.percentual || (rLit / MAX_LITERS) * 100);
-            const nextLit = rows[idx + 1] ? parseFloat(rows[idx + 1].volume || rows[idx + 1].litros || 0) : rLit;
+            const nextLit = rows[idx + 1] ? parseFloat(rows[idx + 1].volume || rows[idx + 1].litros || (parseFloat(rows[idx + 1].altura || 0) / MAX_CM) * MAX_LITERS) : rLit;
             const diff = +(rLit - nextLit).toFixed(1);
 
             let varHtml = `<td class="var-zero">— 0 L</td>`;
@@ -319,60 +324,83 @@
           });
         }
       } catch (err) {
-        console.log("Aguardando configuração da URL do Apps Script:", err);
+        console.log("Erro na leitura da planilha:", err);
       }
     }
 
-    // 5. Conexão Web Bluetooth (BLE) para nível instantâneo do ESP32
     async function connectBLE() {
       if (!navigator.bluetooth) {
-        alert("Utilize o Chrome no Android para conectar ao Bluetooth BLE.");
+        alert("Abra este aplicativo no Android com Chrome atualizado para usar o Bluetooth BLE.");
         return;
       }
       try {
         if ("Notification" in window && Notification.permission !== "granted") {
           await Notification.requestPermission();
         }
+
+        const MEUS_SERVICOS_BLE = [
+          '4fafc201-1fb5-459e-8fcc-c5c9c331914b',
+          '6e400001-b5a3-f393-e0a9-e50e24dcca9e',
+          '0000ffe0-0000-1000-8000-00805f9b34fb',
+          '0000181a-0000-1000-8000-00805f9b34fb'
+        ];
+
         const device = await navigator.bluetooth.requestDevice({
           acceptAllDevices: true,
-          optionalServices: [
-            '0000ffe0-0000-1000-8000-00805f9b34fb', // UUID padrão HM-10 / Serial BLE
-            '6e400001-b5a3-f393-e0a9-e50e24dcca9e', // UUID padrão Nordic UART ESP32
-            '4fafc201-1fb5-459e-8fcc-c5c9c331914b'  // UUID padrão exemplos ESP32 BLE
-          ]
+          optionalServices: MEUS_SERVICOS_BLE
+        });
+
+        device.addEventListener('gattserverdisconnected', () => {
+          document.getElementById('bleBtn').classList.remove('ble-active');
+          document.getElementById('liveTag').style.display = 'none';
         });
 
         const server = await device.gatt.connect();
         document.getElementById('bleBtn').classList.add('ble-active');
         document.getElementById('liveTag').style.display = 'inline';
 
+        const processarDadoBLE = (dataView) => {
+          let txt = new TextDecoder().decode(dataView).trim();
+          const match = txt.replace(',', '.').match(/[\d.]+/);
+          let val = match ? parseFloat(match[0]) : NaN;
+
+          if (isNaN(val) && dataView.byteLength > 0) {
+            val = dataView.getUint8(0);
+          }
+
+          if (!isNaN(val)) {
+            const cm = val;
+            const liters = (cm / MAX_CM) * MAX_LITERS;
+            const pct = (liters / MAX_LITERS) * 100;
+            updateDisplay(cm, liters, pct);
+          }
+        };
+
         const services = await server.getPrimaryServices();
         for (const service of services) {
           const chars = await service.getCharacteristics();
           for (const c of chars) {
-            if (c.properties.notify || c.properties.read) {
-              if (c.properties.notify) {
-                await c.startNotifications();
-                c.addEventListener('characteristicvaluechanged', e => {
-                  const txt = new TextDecoder().decode(e.target.value).trim();
-                  const val = parseFloat(txt.replace(',', '.'));
-                  if (!isNaN(val)) {
-                    const cm = val;
-                    const liters = (cm / MAX_CM) * MAX_LITERS;
-                    const pct = (liters / MAX_LITERS) * 100;
-                    updateDisplay(cm, liters, pct);
-                  }
-                });
-              }
+            if (c.properties.notify || c.properties.indicate) {
+              await c.startNotifications();
+              c.addEventListener('characteristicvaluechanged', e => processarDadoBLE(e.target.value));
+            }
+            if (c.properties.read) {
+              const initialVal = await c.readValue();
+              processarDadoBLE(initialVal);
+              setInterval(async () => {
+                if (device.gatt.connected) {
+                  const v = await c.readValue();
+                  processarDadoBLE(v);
+                }
+              }, 2000);
             }
           }
         }
       } catch (err) {
-        console.log("Conexão BLE cancelada ou falhou:", err);
+        alert("Conexão BLE não concluída: " + err.message);
       }
     }
 
-    // Funções de Interface
     function setPeriod(btn, label) {
       document.querySelectorAll('.pill').forEach(p => p.classList.remove('active'));
       btn.classList.add('active');
@@ -394,7 +422,7 @@
     window.onload = () => {
       initChart();
       fetchSheetData();
-      setInterval(fetchSheetData, 60000); // Atualiza a cada 1 min
+      setInterval(fetchSheetData, 60000);
     };
   </script>
 </body>
