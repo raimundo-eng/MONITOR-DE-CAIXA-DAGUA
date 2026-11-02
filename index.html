@@ -1,0 +1,401 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#0b57d0">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <title>Caixa d'água</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+    body { background-color: #f0f4f9; color: #1e293b; padding-bottom: 75px; user-select: none; }
+    
+    /* Cabeçalho */
+    header { background: linear-gradient(180deg, #0b57d0 0%, #1665d8 100%); color: white; padding: 16px 20px; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 100; box-shadow: 0 2px 8px rgba(0,0,0,0.15); }
+    .header-left { display: flex; align-items: center; gap: 16px; }
+    header h1 { font-size: 20px; font-weight: 600; letter-spacing: 0.2px; }
+    .icon-btn { background: none; border: none; color: white; font-size: 22px; cursor: pointer; display: flex; align-items: center; justify-content: center; padding: 4px; }
+    .ble-active { color: #4ade80 !important; filter: drop-shadow(0 0 6px rgba(74,222,128,0.8)); }
+
+    /* Contentor e Cartões */
+    .container { padding: 14px; max-width: 480px; margin: 0 auto; display: flex; flex-direction: column; gap: 14px; }
+    .card { background: #ffffff; border-radius: 18px; padding: 18px; box-shadow: 0 2px 10px rgba(15, 23, 42, 0.05); }
+
+    /* Cartão Nível Atual */
+    .top-grid { display: grid; grid-template-columns: 1.25fr 1fr; align-items: center; }
+    .level-col { border-right: 1px solid #e2e8f0; padding-right: 12px; }
+    .label-muted { font-size: 16px; font-weight: 600; color: #475569; margin-bottom: 2px; }
+    .big-pct { font-size: 52px; font-weight: 800; color: #0b2545; line-height: 1.05; letter-spacing: -1.5px; }
+    .big-pct span { font-size: 30px; font-weight: 700; margin-left: 2px; }
+    .sub-metrics { font-size: 15px; font-weight: 500; color: #334155; margin-top: 6px; }
+    .progress-track { width: 100%; height: 11px; background: #e2e8f0; border-radius: 8px; margin-top: 12px; overflow: hidden; }
+    .progress-bar { height: 100%; background: linear-gradient(90deg, #0b57d0, #2563eb); border-radius: 8px; width: 94.6%; transition: width 0.4s ease, background 0.4s ease; }
+
+    .trend-col { text-align: center; padding-left: 12px; }
+    .trend-badge { display: inline-flex; align-items: center; gap: 6px; font-size: 19px; font-weight: 700; color: #16a34a; margin-bottom: 4px; }
+    .trend-badge.down { color: #dc2626; }
+    .trend-liters { font-size: 18px; font-weight: 800; color: #0f172a; }
+    .trend-caption { font-size: 12px; color: #64748b; margin-top: 2px; }
+
+    /* Cartão Consumo e Gráfico */
+    .card-header { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; margin-bottom: 8px; }
+    .card-title { display: flex; align-items: center; gap: 8px; font-size: 15px; font-weight: 700; color: #0f172a; }
+    .pills { display: flex; gap: 4px; }
+    .pill { border: 1px solid #cbd5e1; background: #f8fafc; color: #334155; font-size: 12px; font-weight: 600; padding: 5px 10px; border-radius: 20px; cursor: pointer; }
+    .pill.active { background: #0b57d0; color: white; border-color: #0b57d0; }
+    .consumption-val { font-size: 34px; font-weight: 800; color: #0b2545; line-height: 1.1; }
+    .consumption-val span { font-size: 16px; font-weight: 500; color: #334155; }
+    .consumption-period { font-size: 13px; color: #475569; margin: 4px 0 12px 0; }
+    .chart-box { height: 150px; width: 100%; }
+
+    /* Tabela Leituras Recentes */
+    .freq-badge { font-size: 12px; color: #475569; font-weight: 500; }
+    table { width: 100%; border-collapse: collapse; margin-top: 8px; font-size: 13px; text-align: center; }
+    th { background: #f1f5f9; color: #334155; font-weight: 600; padding: 8px 4px; font-size: 11.5px; border-bottom: 1px solid #e2e8f0; }
+    td { padding: 9px 4px; border-bottom: 1px solid #f1f5f9; color: #1e293b; font-weight: 500; }
+    td:first-child { font-weight: 700; }
+    .var-up { color: #16a34a; font-weight: 700; }
+    .var-down { color: #dc2626; font-weight: 700; }
+    .var-zero { color: #64748b; }
+
+    /* Alerta Banner */
+    #alertBanner { display: none; background: #fee2e2; border-left: 5px solid #dc2626; color: #991b1b; padding: 12px 16px; border-radius: 12px; font-size: 14px; font-weight: 600; align-items: center; justify-content: space-between; }
+
+    /* Barra de Navegação Inferior */
+    .bottom-nav { position: fixed; bottom: 0; left: 0; right: 0; height: 64px; background: white; display: flex; justify-content: space-around; align-items: center; border-top: 1px solid #e2e8f0; z-index: 100; }
+    .nav-item { display: flex; flex-direction: column; align-items: center; gap: 4px; color: #64748b; font-size: 12px; font-weight: 600; cursor: pointer; background: none; border: none; width: 50%; height: 100%; justify-content: center; position: relative; }
+    .nav-item.active { color: #0b57d0; }
+    .nav-item.active::after { content: ""; position: absolute; bottom: 0; width: 65%; height: 3px; background: #0b57d0; border-radius: 3px 3px 0 0; }
+
+    /* Modal de Configurações */
+    #settingsModal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 200; align-items: center; justify-content: center; padding: 16px; }
+    .modal-content { background: white; width: 100%; max-width: 400px; border-radius: 18px; padding: 20px; display: flex; flex-direction: column; gap: 12px; }
+    .modal-content input { width: 100%; padding: 10px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 14px; }
+    .btn-save { background: #0b57d0; color: white; border: none; padding: 12px; border-radius: 10px; font-weight: 700; cursor: pointer; }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div class="header-left">
+      <button class="icon-btn" onclick="openSettings()" title="Menu">☰</button>
+      <h1>Caixa d'água</h1>
+    </div>
+    <div style="display: flex; gap: 12px;">
+      <button class="icon-btn" id="bleBtn" onclick="connectBLE()" title="Conectar Bluetooth Instantâneo">ᛒ</button>
+      <button class="icon-btn" onclick="fetchSheetData()" title="Atualizar Nuvem">↻</button>
+    </div>
+  </header>
+
+  <div class="container">
+    <!-- Banner de Alerta Crítico (70%, 50%, 30%) -->
+    <div id="alertBanner">
+      <span id="alertText">⚠️ Alerta de Volume!</span>
+      <button onclick="document.getElementById('alertBanner').style.display='none'" style="background:none;border:none;font-weight:bold;color:#991b1b;font-size:16px;">✕</button>
+    </div>
+
+    <!-- Cartão 1: Nível Atual -->
+    <div class="card">
+      <div class="top-grid">
+        <div class="level-col">
+          <div class="label-muted">Nível Atual <small id="liveTag" style="display:none;color:#16a34a;font-size:11px;">● BLE</small></div>
+          <div class="big-pct" id="lvlPct">94,6<span>%</span></div>
+          <div class="sub-metrics" id="lvlSub">94,6 cm • 946 L</div>
+          <div class="progress-track">
+            <div class="progress-bar" id="lvlBar"></div>
+          </div>
+        </div>
+        <div class="trend-col">
+          <div class="trend-badge" id="trendBadge">📈 <span id="trendStatus">Subindo</span></div>
+          <div class="trend-liters" id="trendDelta">+4,4 L</div>
+          <div class="trend-caption">(últimas 3 leituras)</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Cartão 2: Consumo no Período -->
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title">📊 Consumo no Período</div>
+        <div class="pills">
+          <button class="pill active" onclick="setPeriod(this, 'Hoje')">Hoje</button>
+          <button class="pill" onclick="setPeriod(this, '24 h')">24 h</button>
+          <button class="pill" onclick="setPeriod(this, '7 dias')">7 dias</button>
+          <button class="pill" onclick="setPeriod(this, '30 dias')">30 dias</button>
+        </div>
+      </div>
+      <div class="consumption-val" id="consTotal">54 L <span>consumidos</span></div>
+      <div class="consumption-period" id="consRange">Hoje • 00:00 – 14:00</div>
+      <div class="chart-box">
+        <canvas id="consumptionChart"></canvas>
+      </div>
+    </div>
+
+    <!-- Cartão 3: Leituras Recentes -->
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title">🕒 Leituras Recentes</div>
+        <span class="freq-badge">A cada 15 min</span>
+      </div>
+      <table>
+        <thead>
+          <tr>
+            <th>Horário</th>
+            <th>Altura da água</th>
+            <th>Volume</th>
+            <th>Nível</th>
+            <th>Variação</th>
+          </tr>
+        </thead>
+        <tbody id="readingsBody">
+          <tr><td>14:00</td><td>94,6 cm</td><td>946 L</td><td>94,6%</td><td class="var-up">▲ +4,4 L</td></tr>
+          <tr><td>13:45</td><td>90,2 cm</td><td>902 L</td><td>90,2%</td><td class="var-down">▼ 9 L</td></tr>
+          <tr><td>13:30</td><td>91,1 cm</td><td>911 L</td><td>91,1%</td><td class="var-down">▼ 4 L</td></tr>
+          <tr><td>13:15</td><td>91,5 cm</td><td>915 L</td><td>91,5%</td><td class="var-down">▼ 12 L</td></tr>
+          <tr><td>13:00</td><td>92,7 cm</td><td>927 L</td><td>92,7%</td><td class="var-zero">— 0 L</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Navegação Inferior -->
+  <nav class="bottom-nav">
+    <button class="nav-item active" onclick="closeSettings()">
+      <span style="font-size:20px;">🏠</span>
+      <span>Início</span>
+    </button>
+    <button class="nav-item" onclick="openSettings()">
+      <span style="font-size:20px;">⚙️</span>
+      <span>Configurações</span>
+    </button>
+  </nav>
+
+  <!-- Modal de Configurações (URL do Apps Script e Capacidade) -->
+  <div id="settingsModal">
+    <div class="modal-content">
+      <h3>Configurações do Sistema</h3>
+      <label style="font-size:12px;color:#475569;">URL do Google Apps Script:</label>
+      <input type="text" id="apiInput" value="https://script.google.com/macros/s/SEU_NOVO_ID/exec">
+      <label style="font-size:12px;color:#475569;">Capacidade Total (Litros):</label>
+      <input type="number" id="maxLitersInput" value="1000">
+      <label style="font-size:12px;color:#475569;">Altura Máxima da Água (cm):</label>
+      <input type="number" id="maxCmInput" value="100">
+      <button class="btn-save" onclick="saveSettings()">Salvar e Atualizar</button>
+    </div>
+  </div>
+
+  <script>
+    // Configurações padrão (salvas no telemóvel via localStorage)
+    let API_URL = localStorage.getItem('api_url') || "https://script.google.com/macros/s/SEU_NOVO_ID/exec";
+    let MAX_LITERS = parseFloat(localStorage.getItem('max_liters') || 1000);
+    let MAX_CM = parseFloat(localStorage.getItem('max_cm') || 100);
+    let triggeredAlerts = new Set();
+    let chartInstance = null;
+
+    document.getElementById('apiInput').value = API_URL;
+    document.getElementById('maxLitersInput').value = MAX_LITERS;
+    document.getElementById('maxCmInput').value = MAX_CM;
+
+    // 1. Inicializar Gráfico idêntico à imagem
+    function initChart(labels = ['08h', '10h', '12h', '14h'], values = [62, 85, 74, 94.6]) {
+      const ctx = document.getElementById('consumptionChart').getContext('2d');
+      const gradient = ctx.createLinearGradient(0, 0, 0, 140);
+      gradient.addColorStop(0, 'rgba(11, 87, 208, 0.35)');
+      gradient.addColorStop(1, 'rgba(11, 87, 208, 0.0)');
+
+      if (chartInstance) chartInstance.destroy();
+      chartInstance = new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: labels,
+          datasets: [{
+            data: values,
+            borderColor: '#0b57d0',
+            borderWidth: 2.5,
+            pointBackgroundColor: '#0b57d0',
+            pointRadius: 4,
+            fill: true,
+            backgroundColor: gradient,
+            tension: 0.35
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { display: false } },
+          scales: {
+            y: { min: 0, max: 100, ticks: { stepSize: 50, callback: v => v + '%' }, grid: { color: '#f1f5f9' } },
+            x: { grid: { color: '#f1f5f9' } }
+          }
+        }
+      });
+    }
+
+    // 2. Sistema de Alertas (70%, 50% e 30%) com som e Notificação Android
+    function playBeep() {
+      try {
+        const ctx = new (window.AudioContext || window.webkitAudioContext)();
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(880, ctx.currentTime);
+        gain.gain.setValueAtTime(0.25, ctx.currentTime);
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start();
+        osc.stop(ctx.currentTime + 0.4);
+      } catch (e) {}
+    }
+
+    function checkVolumeAlerts(pct) {
+      const bar = document.getElementById('lvlBar');
+      if (pct <= 30) bar.style.background = '#dc2626';
+      else if (pct <= 50) bar.style.background = '#f59e0b';
+      else bar.style.background = 'linear-gradient(90deg, #0b57d0, #2563eb)';
+
+      [70, 50, 30].forEach(limit => {
+        if (pct <= limit && !triggeredAlerts.has(limit)) {
+          triggeredAlerts.add(limit);
+          const msg = `⚠️ Atenção: Volume atingiu ${pct.toFixed(1).replace('.', ',')}% (Limite de ${limit}%)`;
+          document.getElementById('alertText').innerText = msg;
+          document.getElementById('alertBanner').style.display = 'flex';
+          playBeep();
+
+          if ("Notification" in window && Notification.permission === "granted") {
+            new Notification("Alerta da Caixa d'Água", { body: msg });
+          }
+        } else if (pct > limit + 3) {
+          triggeredAlerts.delete(limit); // Rearma se o nível voltar a subir
+        }
+      });
+    }
+
+    // 3. Atualizar ecrã com novos valores
+    function updateDisplay(cm, liters, pct) {
+      document.getElementById('lvlPct').innerHTML = `${pct.toFixed(1).replace('.', ',')}<span>%</span>`;
+      document.getElementById('lvlSub').innerText = `${cm.toFixed(1).replace('.', ',')} cm • ${Math.round(liters)} L`;
+      document.getElementById('lvlBar').style.width = `${Math.min(100, Math.max(0, pct))}%`;
+      checkVolumeAlerts(pct);
+    }
+
+    // 4. Buscar dados do Google Apps Script (JSON)
+    async function fetchSheetData() {
+      if (API_URL.includes("SEU_NOVO_ID")) return;
+      try {
+        const res = await fetch(API_URL);
+        const data = await res.json();
+
+        // Suporta formato { altura: 94.6, volume: 946, nivel: 94.6, historico: [...] } ou Array direto da folha
+        const rows = Array.isArray(data) ? data : (data.historico || data.readings || []);
+        if (rows.length > 0) {
+          const latest = rows[0];
+          const cm = parseFloat(latest.altura || latest.cm || 0);
+          const liters = parseFloat(latest.volume || latest.litros || (cm / MAX_CM) * MAX_LITERS);
+          const pct = parseFloat(latest.nivel || latest.percentual || (liters / MAX_LITERS) * 100);
+          updateDisplay(cm, liters, pct);
+
+          // Renderizar tabela das últimas 5 leituras
+          const tbody = document.getElementById('readingsBody');
+          tbody.innerHTML = '';
+          rows.slice(0, 5).forEach((r, idx) => {
+            const rCm = parseFloat(r.altura || r.cm || 0);
+            const rLit = parseFloat(r.volume || r.litros || (rCm / MAX_CM) * MAX_LITERS);
+            const rPct = parseFloat(r.nivel || r.percentual || (rLit / MAX_LITERS) * 100);
+            const nextLit = rows[idx + 1] ? parseFloat(rows[idx + 1].volume || rows[idx + 1].litros || 0) : rLit;
+            const diff = +(rLit - nextLit).toFixed(1);
+
+            let varHtml = `<td class="var-zero">— 0 L</td>`;
+            if (diff > 0) varHtml = `<td class="var-up">▲ +${String(diff).replace('.', ',')} L</td>`;
+            if (diff < 0) varHtml = `<td class="var-down">▼ ${String(Math.abs(diff)).replace('.', ',')} L</td>`;
+
+            tbody.innerHTML += `<tr>
+              <td>${r.horario || r.hora || '--:--'}</td>
+              <td>${rCm.toFixed(1).replace('.', ',')} cm</td>
+              <td>${Math.round(rLit)} L</td>
+              <td>${rPct.toFixed(1).replace('.', ',')}%</td>
+              ${varHtml}
+            </tr>`;
+          });
+        }
+      } catch (err) {
+        console.log("Aguardando configuração da URL do Apps Script:", err);
+      }
+    }
+
+    // 5. Conexão Web Bluetooth (BLE) para nível instantâneo do ESP32
+    async function connectBLE() {
+      if (!navigator.bluetooth) {
+        alert("Utilize o Chrome no Android para conectar ao Bluetooth BLE.");
+        return;
+      }
+      try {
+        if ("Notification" in window && Notification.permission !== "granted") {
+          await Notification.requestPermission();
+        }
+        const device = await navigator.bluetooth.requestDevice({
+          acceptAllDevices: true,
+          optionalServices: [
+            '0000ffe0-0000-1000-8000-00805f9b34fb', // UUID padrão HM-10 / Serial BLE
+            '6e400001-b5a3-f393-e0a9-e50e24dcca9e', // UUID padrão Nordic UART ESP32
+            '4fafc201-1fb5-459e-8fcc-c5c9c331914b'  // UUID padrão exemplos ESP32 BLE
+          ]
+        });
+
+        const server = await device.gatt.connect();
+        document.getElementById('bleBtn').classList.add('ble-active');
+        document.getElementById('liveTag').style.display = 'inline';
+
+        const services = await server.getPrimaryServices();
+        for (const service of services) {
+          const chars = await service.getCharacteristics();
+          for (const c of chars) {
+            if (c.properties.notify || c.properties.read) {
+              if (c.properties.notify) {
+                await c.startNotifications();
+                c.addEventListener('characteristicvaluechanged', e => {
+                  const txt = new TextDecoder().decode(e.target.value).trim();
+                  const val = parseFloat(txt.replace(',', '.'));
+                  if (!isNaN(val)) {
+                    const cm = val;
+                    const liters = (cm / MAX_CM) * MAX_LITERS;
+                    const pct = (liters / MAX_LITERS) * 100;
+                    updateDisplay(cm, liters, pct);
+                  }
+                });
+              }
+            }
+          }
+        }
+      } catch (err) {
+        console.log("Conexão BLE cancelada ou falhou:", err);
+      }
+    }
+
+    // Funções de Interface
+    function setPeriod(btn, label) {
+      document.querySelectorAll('.pill').forEach(p => p.classList.remove('active'));
+      btn.classList.add('active');
+      document.getElementById('consRange').innerText = `${label} • Atualizado`;
+    }
+    function openSettings() { document.getElementById('settingsModal').style.display = 'flex'; }
+    function closeSettings() { document.getElementById('settingsModal').style.display = 'none'; }
+    function saveSettings() {
+      API_URL = document.getElementById('apiInput').value.trim();
+      MAX_LITERS = parseFloat(document.getElementById('maxLitersInput').value) || 1000;
+      MAX_CM = parseFloat(document.getElementById('maxCmInput').value) || 100;
+      localStorage.setItem('api_url', API_URL);
+      localStorage.setItem('max_liters', MAX_LITERS);
+      localStorage.setItem('max_cm', MAX_CM);
+      closeSettings();
+      fetchSheetData();
+    }
+
+    window.onload = () => {
+      initChart();
+      fetchSheetData();
+      setInterval(fetchSheetData, 60000); // Atualiza a cada 1 min
+    };
+  </script>
+</body>
+</html>
