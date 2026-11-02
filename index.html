@@ -175,7 +175,6 @@
   </div>
 
   <script>
-    // Registra o Service Worker para liberar o APK no PWABuilder
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
         navigator.serviceWorker.register('./sw.js').catch(() => {});
@@ -284,7 +283,6 @@
           const pct = parseFloat(latest.nivel || latest.percentual || (liters / MAX_LITERS) * 100);
           updateDisplay(cm, liters, pct);
 
-          // Atualiza tendência das últimas 3 leituras
           if (rows.length >= 3) {
             const l0 = parseFloat(rows[0].volume || rows[0].litros || (parseFloat(rows[0].altura || 0) / MAX_CM) * MAX_LITERS);
             const l2 = parseFloat(rows[2].volume || rows[2].litros || (parseFloat(rows[2].altura || 0) / MAX_CM) * MAX_LITERS);
