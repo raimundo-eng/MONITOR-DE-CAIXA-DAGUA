@@ -30,7 +30,7 @@
     .big-pct span { font-size: 30px; font-weight: 700; margin-left: 2px; }
     .sub-metrics { font-size: 15px; font-weight: 500; color: #334155; margin-top: 6px; }
     .progress-track { width: 100%; height: 11px; background: #e2e8f0; border-radius: 8px; margin-top: 12px; overflow: hidden; }
-    .progress-bar { height: 100%; background: linear-gradient(90deg, #0b57d0, #2563eb); border-radius: 8px; width: 94.6%; transition: width 0.4s ease, background 0.4s ease; }
+    .progress-bar { height: 100%; background: linear-gradient(90deg, #0b57d0, #2563eb); border-radius: 8px; width: 0%; transition: width 0.4s ease, background 0.4s ease; }
 
     .trend-col { text-align: center; padding-left: 12px; }
     .trend-badge { display: inline-flex; align-items: center; gap: 6px; font-size: 19px; font-weight: 700; color: #16a34a; margin-bottom: 4px; }
@@ -93,15 +93,15 @@
       <div class="top-grid">
         <div class="level-col">
           <div class="label-muted">Nível Atual <small id="liveTag" style="display:none;color:#16a34a;font-size:11px;">● BLE</small></div>
-          <div class="big-pct" id="lvlPct">94,6<span>%</span></div>
-          <div class="sub-metrics" id="lvlSub">94,6 cm • 946 L</div>
+          <div class="big-pct" id="lvlPct">--<span>%</span></div>
+          <div class="sub-metrics" id="lvlSub">-- cm • -- L</div>
           <div class="progress-track">
             <div class="progress-bar" id="lvlBar"></div>
           </div>
         </div>
         <div class="trend-col">
-          <div class="trend-badge" id="trendBadge">📈 <span id="trendStatus">Subindo</span></div>
-          <div class="trend-liters" id="trendDelta">+4,4 L</div>
+          <div class="trend-badge" id="trendBadge">📈 <span id="trendStatus">--</span></div>
+          <div class="trend-liters" id="trendDelta">--</div>
           <div class="trend-caption">(últimas 3 leituras)</div>
         </div>
       </div>
@@ -111,14 +111,14 @@
       <div class="card-header">
         <div class="card-title">📊 Consumo no Período</div>
         <div class="pills">
-          <button class="pill active" onclick="setPeriod(this, 'Hoje')">Hoje</button>
-          <button class="pill" onclick="setPeriod(this, '24 h')">24 h</button>
-          <button class="pill" onclick="setPeriod(this, '7 dias')">7 dias</button>
-          <button class="pill" onclick="setPeriod(this, '30 dias')">30 dias</button>
+          <button class="pill active" onclick="setPeriod(this, 'hoje')">Hoje</button>
+          <button class="pill" onclick="setPeriod(this, '24h')">24 h</button>
+          <button class="pill" onclick="setPeriod(this, '7d')">7 dias</button>
+          <button class="pill" onclick="setPeriod(this, '30d')">30 dias</button>
         </div>
       </div>
-      <div class="consumption-val" id="consTotal">54 L <span>consumidos</span></div>
-      <div class="consumption-period" id="consRange">Hoje • 00:00 – 14:00</div>
+      <div class="consumption-val" id="consTotal">-- L <span>consumidos</span></div>
+      <div class="consumption-period" id="consRange">--</div>
       <div class="chart-box">
         <canvas id="consumptionChart"></canvas>
       </div>
@@ -127,7 +127,7 @@
     <div class="card">
       <div class="card-header">
         <div class="card-title">🕒 Leituras Recentes</div>
-        <span class="freq-badge">A cada 15 min</span>
+        <span class="freq-badge" id="freqBadge"></span>
       </div>
       <table>
         <thead>
@@ -139,13 +139,7 @@
             <th>Variação</th>
           </tr>
         </thead>
-        <tbody id="readingsBody">
-          <tr><td>14:00</td><td>94,6 cm</td><td>946 L</td><td>94,6%</td><td class="var-up">▲ +4,4 L</td></tr>
-          <tr><td>13:45</td><td>90,2 cm</td><td>902 L</td><td>90,2%</td><td class="var-down">▼ 9 L</td></tr>
-          <tr><td>13:30</td><td>91,1 cm</td><td>911 L</td><td>91,1%</td><td class="var-down">▼ 4 L</td></tr>
-          <tr><td>13:15</td><td>91,5 cm</td><td>915 L</td><td>91,5%</td><td class="var-down">▼ 12 L</td></tr>
-          <tr><td>13:00</td><td>92,7 cm</td><td>927 L</td><td>92,7%</td><td class="var-zero">— 0 L</td></tr>
-        </tbody>
+        <tbody id="readingsBody"><tr><td colspan="5" style="color:#64748b">Aguardando dados…</td></tr></tbody>
       </table>
     </div>
   </div>
@@ -164,12 +158,11 @@
   <div id="settingsModal">
     <div class="modal-content">
       <h3>Configurações do Sistema</h3>
-      <label style="font-size:12px;color:#475569;">URL do Google Apps Script:</label>
-      <input type="text" id="apiInput" value="https://script.google.com/macros/s/SEU_NOVO_ID/exec">
-      <label style="font-size:12px;color:#475569;">Capacidade Total (Litros):</label>
-      <input type="number" id="maxLitersInput" value="1000">
-      <label style="font-size:12px;color:#475569;">Altura Máxima da Água (cm):</label>
-      <input type="number" id="maxCmInput" value="100">
+      <label style="font-size:12px;color:#475569;">URL do Google Apps Script (termina em /exec):</label>
+      <input type="text" id="apiInput" placeholder="https://script.google.com/macros/s/.../exec">
+      <label style="font-size:12px;color:#475569;">Token (igual ao TOKEN_ESPERADO do script):</label>
+      <input type="password" id="tokenInput" autocomplete="off">
+      <div id="statusMsg" style="font-size:12px;color:#64748b;min-height:16px;"></div>
       <button class="btn-save" onclick="saveSettings()">Salvar e Atualizar</button>
     </div>
   </div>
@@ -181,45 +174,65 @@
       });
     }
 
-    let API_URL = localStorage.getItem('api_url') || "https://script.google.com/macros/s/SEU_NOVO_ID/exec";
-    let MAX_LITERS = parseFloat(localStorage.getItem('max_liters') || 1000);
-    let MAX_CM = parseFloat(localStorage.getItem('max_cm') || 100);
+    // ===== Configuração (salva no aparelho) =====
+    let API_URL = localStorage.getItem('api_url') || '';
+    let TOKEN   = localStorage.getItem('api_token') || '';
     let triggeredAlerts = new Set();
     let chartInstance = null;
+    let READINGS = [];          // [{t, cm, altura, litros, pct}] do mais antigo para o mais novo
+    let LITROS_MAX = 918;       // sobrescrito pelo servidor
+    let PERIOD = 'hoje';
+    let bleLastTs = 0;          // última leitura BLE (para a nuvem não sobrescrever o "ao vivo")
+
+    // Mesma calibração do Apps Script (usada só para leituras BLE, que chegam em cm de distância)
+    const DIST_VAZIA_CM = 96, ALTURA_MAX_CM = 71, LIMITE_ALTURA_CM = 76;
+    const TABELA = [[0,0],[10,103],[20,214],[30,333],[40,461],[50,598],[60,745],[70,901],[71,918],[76,1000]];
+    function litrosPorAltura(h) {
+      if (h <= TABELA[0][0]) return TABELA[0][1];
+      if (h >= TABELA[TABELA.length-1][0]) return TABELA[TABELA.length-1][1];
+      for (let i = 1; i < TABELA.length; i++) {
+        if (h <= TABELA[i][0]) {
+          const a = TABELA[i-1], b = TABELA[i];
+          return a[1] + (b[1]-a[1]) * (h-a[0]) / (b[0]-a[0]);
+        }
+      }
+      return 0;
+    }
 
     document.getElementById('apiInput').value = API_URL;
-    document.getElementById('maxLitersInput').value = MAX_LITERS;
-    document.getElementById('maxCmInput').value = MAX_CM;
+    document.getElementById('tokenInput').value = TOKEN;
 
-    function initChart(labels = ['08h', '10h', '12h', '14h'], values = [62, 85, 74, 94.6]) {
+    const fmt = (n, d = 1) => Number(n).toFixed(d).replace('.', ',');
+    const pad = n => String(n).padStart(2, '0');
+    const hhmm = d => `${pad(d.getHours())}:${pad(d.getMinutes())}`;
+    const ddmm = d => `${pad(d.getDate())}/${pad(d.getMonth()+1)}`;
+
+    function setStatus(msg, isError) {
+      const el = document.getElementById('statusMsg');
+      el.style.color = isError ? '#dc2626' : '#64748b';
+      el.innerText = msg;
+      if (isError) {
+        document.getElementById('alertText').innerText = '⚠️ ' + msg;
+        document.getElementById('alertBanner').style.display = 'flex';
+      }
+    }
+
+    function initChart(labels = [], values = []) {
       const ctx = document.getElementById('consumptionChart').getContext('2d');
       const gradient = ctx.createLinearGradient(0, 0, 0, 140);
       gradient.addColorStop(0, 'rgba(11, 87, 208, 0.35)');
       gradient.addColorStop(1, 'rgba(11, 87, 208, 0.0)');
-
       if (chartInstance) chartInstance.destroy();
       chartInstance = new Chart(ctx, {
         type: 'line',
-        data: {
-          labels: labels,
-          datasets: [{
-            data: values,
-            borderColor: '#0b57d0',
-            borderWidth: 2.5,
-            pointBackgroundColor: '#0b57d0',
-            pointRadius: 4,
-            fill: true,
-            backgroundColor: gradient,
-            tension: 0.35
-          }]
-        },
+        data: { labels, datasets: [{ data: values, borderColor: '#0b57d0', borderWidth: 2.5, pointRadius: values.length > 30 ? 0 : 3,
+                pointBackgroundColor: '#0b57d0', fill: true, backgroundColor: gradient, tension: 0.35 }] },
         options: {
-          responsive: true,
-          maintainAspectRatio: false,
+          responsive: true, maintainAspectRatio: false,
           plugins: { legend: { display: false } },
           scales: {
             y: { min: 0, max: 100, ticks: { stepSize: 50, callback: v => v + '%' }, grid: { color: '#f1f5f9' } },
-            x: { grid: { color: '#f1f5f9' } }
+            x: { grid: { color: '#f1f5f9' }, ticks: { maxTicksLimit: 6, maxRotation: 0 } }
           }
         }
       });
@@ -228,15 +241,11 @@
     function playBeep() {
       try {
         const ctx = new (window.AudioContext || window.webkitAudioContext)();
-        const osc = ctx.createOscillator();
-        const gain = ctx.createGain();
-        osc.type = 'sine';
-        osc.frequency.setValueAtTime(880, ctx.currentTime);
+        const osc = ctx.createOscillator(), gain = ctx.createGain();
+        osc.type = 'sine'; osc.frequency.setValueAtTime(880, ctx.currentTime);
         gain.gain.setValueAtTime(0.25, ctx.currentTime);
-        osc.connect(gain);
-        gain.connect(ctx.destination);
-        osc.start();
-        osc.stop(ctx.currentTime + 0.4);
+        osc.connect(gain); gain.connect(ctx.destination);
+        osc.start(); osc.stop(ctx.currentTime + 0.4);
       } catch (e) {}
     }
 
@@ -245,15 +254,13 @@
       if (pct <= 30) bar.style.background = '#dc2626';
       else if (pct <= 50) bar.style.background = '#f59e0b';
       else bar.style.background = 'linear-gradient(90deg, #0b57d0, #2563eb)';
-
       [70, 50, 30].forEach(limit => {
         if (pct <= limit && !triggeredAlerts.has(limit)) {
           triggeredAlerts.add(limit);
-          const msg = `⚠️ Atenção: Volume atingiu ${pct.toFixed(1).replace('.', ',')}% (Limite de ${limit}%)`;
+          const msg = `⚠️ Atenção: Volume atingiu ${fmt(pct)}% (Limite de ${limit}%)`;
           document.getElementById('alertText').innerText = msg;
           document.getElementById('alertBanner').style.display = 'flex';
           playBeep();
-
           if ("Notification" in window && Notification.permission === "granted") {
             new Notification("Alerta da Caixa d'Água", { body: msg });
           }
@@ -263,115 +270,167 @@
       });
     }
 
-    function updateDisplay(cm, liters, pct) {
-      document.getElementById('lvlPct').innerHTML = `${pct.toFixed(1).replace('.', ',')}<span>%</span>`;
-      document.getElementById('lvlSub').innerText = `${cm.toFixed(1).replace('.', ',')} cm • ${Math.round(liters)} L`;
+    // altura = altura da água (cm); litros; pct
+    function updateDisplay(altura, litros, pct) {
+      document.getElementById('lvlPct').innerHTML = `${fmt(pct, 0)}<span>%</span>`;
+      document.getElementById('lvlSub').innerText = `${fmt(altura)} cm • ${Math.round(litros)} L`;
       document.getElementById('lvlBar').style.width = `${Math.min(100, Math.max(0, pct))}%`;
       checkVolumeAlerts(pct);
     }
 
+    // ===== Nuvem (Google Sheets via Apps Script) =====
     async function fetchSheetData() {
-      if (API_URL.includes("SEU_NOVO_ID")) return;
+      if (!API_URL || !TOKEN) { setStatus('Configure a URL e o token em ☰ / Configurações.', false); return; }
+      let data;
       try {
-        const res = await fetch(API_URL);
-        const data = await res.json();
-        const rows = Array.isArray(data) ? data : (data.historico || data.readings || []);
-        if (rows.length > 0) {
-          const latest = rows[0];
-          const cm = parseFloat(latest.altura || latest.cm || 0);
-          const liters = parseFloat(latest.volume || latest.litros || (cm / MAX_CM) * MAX_LITERS);
-          const pct = parseFloat(latest.nivel || latest.percentual || (liters / MAX_LITERS) * 100);
-          updateDisplay(cm, liters, pct);
-
-          if (rows.length >= 3) {
-            const l0 = parseFloat(rows[0].volume || rows[0].litros || (parseFloat(rows[0].altura || 0) / MAX_CM) * MAX_LITERS);
-            const l2 = parseFloat(rows[2].volume || rows[2].litros || (parseFloat(rows[2].altura || 0) / MAX_CM) * MAX_LITERS);
-            const delta3 = +(l0 - l2).toFixed(1);
-            const badge = document.getElementById('trendBadge');
-            if (delta3 >= 0) {
-              badge.className = 'trend-badge';
-              badge.innerHTML = '📈 <span id="trendStatus">Subindo</span>';
-              document.getElementById('trendDelta').innerText = `+${String(delta3).replace('.', ',')} L`;
-            } else {
-              badge.className = 'trend-badge down';
-              badge.innerHTML = '📉 <span id="trendStatus">Descendo</span>';
-              document.getElementById('trendDelta').innerText = `${String(delta3).replace('.', ',')} L`;
-            }
-          }
-
-          const tbody = document.getElementById('readingsBody');
-          tbody.innerHTML = '';
-          rows.slice(0, 5).forEach((r, idx) => {
-            const rCm = parseFloat(r.altura || r.cm || 0);
-            const rLit = parseFloat(r.volume || r.litros || (rCm / MAX_CM) * MAX_LITERS);
-            const rPct = parseFloat(r.nivel || r.percentual || (rLit / MAX_LITERS) * 100);
-            const nextLit = rows[idx + 1] ? parseFloat(rows[idx + 1].volume || rows[idx + 1].litros || (parseFloat(rows[idx + 1].altura || 0) / MAX_CM) * MAX_LITERS) : rLit;
-            const diff = +(rLit - nextLit).toFixed(1);
-
-            let varHtml = `<td class="var-zero">— 0 L</td>`;
-            if (diff > 0) varHtml = `<td class="var-up">▲ +${String(diff).replace('.', ',')} L</td>`;
-            if (diff < 0) varHtml = `<td class="var-down">▼ ${String(Math.abs(diff)).replace('.', ',')} L</td>`;
-
-            tbody.innerHTML += `<tr>
-              <td>${r.horario || r.hora || '--:--'}</td>
-              <td>${rCm.toFixed(1).replace('.', ',')} cm</td>
-              <td>${Math.round(rLit)} L</td>
-              <td>${rPct.toFixed(1).replace('.', ',')}%</td>
-              ${varHtml}
-            </tr>`;
-          });
+        const url = new URL(API_URL);
+        url.searchParams.set('acao', 'dados');
+        url.searchParams.set('n', '1000');
+        url.searchParams.set('token', TOKEN);
+        const res = await fetch(url.toString(), { cache: 'no-store', redirect: 'follow' });
+        const txt = await res.text();
+        try { data = JSON.parse(txt); }
+        catch (e) {
+          if (/token/i.test(txt)) throw new Error('Token incorreto.');
+          if (/<html/i.test(txt)) throw new Error('O script não está publicado para "Qualquer pessoa" ou a URL está errada.');
+          throw new Error('Resposta inesperada: ' + txt.slice(0, 80));
         }
       } catch (err) {
-        console.log("Erro na leitura da planilha:", err);
+        setStatus(err.message || String(err), true);
+        console.log('Erro na leitura da planilha:', err);
+        return;
       }
+      setStatus('Atualizado às ' + hhmm(new Date()), false);
+      LITROS_MAX = data.litrosMax || LITROS_MAX;
+      READINGS = (data.leituras || []).slice().sort((a, b) => a.t - b.t);
+      render();
     }
 
+    function render() {
+      if (READINGS.length === 0) {
+        document.getElementById('readingsBody').innerHTML = '<tr><td colspan="5" style="color:#64748b">Nenhuma leitura na planilha ainda.</td></tr>';
+        return;
+      }
+      const last = READINGS[READINGS.length - 1];
+      if (Date.now() - bleLastTs > 15000) updateDisplay(last.altura, last.litros, last.pct);
+
+      // Tendência (últimas 3 leituras)
+      const badge = document.getElementById('trendBadge');
+      if (READINGS.length >= 3) {
+        const d3 = last.litros - READINGS[READINGS.length - 3].litros;
+        const up = d3 >= 0;
+        badge.className = 'trend-badge' + (up ? '' : ' down');
+        badge.innerHTML = up ? '📈 <span>Subindo</span>' : '📉 <span>Descendo</span>';
+        document.getElementById('trendDelta').innerText = `${up ? '+' : '−'}${fmt(Math.abs(d3), 0)} L`;
+      }
+
+      // Frequência estimada
+      if (READINGS.length >= 2) {
+        const dt = (last.t - READINGS[READINGS.length - 2].t) / 60000;
+        document.getElementById('freqBadge').innerText = dt < 90 ? `A cada ~${Math.round(dt)} min` : `A cada ~${fmt(dt / 60)} h`;
+      }
+
+      // Leituras recentes (mais nova primeiro)
+      const tbody = document.getElementById('readingsBody');
+      tbody.innerHTML = '';
+      for (let i = READINGS.length - 1; i >= Math.max(0, READINGS.length - 5); i--) {
+        const r = READINGS[i], prev = READINGS[i - 1];
+        const d = new Date(r.t);
+        const diff = prev ? r.litros - prev.litros : 0;
+        let varHtml = '<td class="var-zero">— 0 L</td>';
+        if (diff > 0) varHtml = `<td class="var-up">▲ +${fmt(diff, 0)} L</td>`;
+        if (diff < 0) varHtml = `<td class="var-down">▼ ${fmt(Math.abs(diff), 0)} L</td>`;
+        tbody.innerHTML += `<tr><td>${ddmm(d)} ${hhmm(d)}</td><td>${fmt(r.altura)} cm</td><td>${Math.round(r.litros)} L</td><td>${fmt(r.pct, 0)}%</td>${varHtml}</tr>`;
+      }
+      renderPeriod();
+    }
+
+    function periodStart() {
+      const now = new Date();
+      if (PERIOD === 'hoje') return new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+      if (PERIOD === '24h')  return now.getTime() - 24 * 3600e3;
+      if (PERIOD === '7d')   return now.getTime() - 7 * 86400e3;
+      return now.getTime() - 30 * 86400e3;
+    }
+
+    function renderPeriod() {
+      const t0 = periodStart();
+      const rows = READINGS.filter(r => r.t >= t0);
+      const LABEL = { hoje: 'Hoje', '24h': 'Últimas 24 h', '7d': '7 dias', '30d': '30 dias' }[PERIOD];
+
+      if (rows.length < 2) {
+        document.getElementById('consTotal').innerHTML = '-- L <span>consumidos</span>';
+        document.getElementById('consRange').innerText = `${LABEL} • dados insuficientes`;
+        initChart([], []);
+        return;
+      }
+
+      // Consumo = soma das quedas entre leituras (ignora subidas = reabastecimento e ruído < 3 L)
+      let consumo = 0;
+      for (let i = 1; i < rows.length; i++) {
+        const d = rows[i].litros - rows[i - 1].litros;
+        if (d < -3) consumo += -d;
+      }
+      document.getElementById('consTotal').innerHTML = `${Math.round(consumo)} L <span>consumidos</span>`;
+      const a = new Date(rows[0].t), b = new Date(rows[rows.length - 1].t);
+      document.getElementById('consRange').innerText = `${LABEL} • ${ddmm(a)} ${hhmm(a)} – ${ddmm(b)} ${hhmm(b)}`;
+
+      // Reduz a no máximo ~48 pontos (média por faixa)
+      const maxPts = 48, step = Math.ceil(rows.length / maxPts);
+      const labels = [], values = [];
+      for (let i = 0; i < rows.length; i += step) {
+        const chunk = rows.slice(i, i + step);
+        const pct = chunk.reduce((s, r) => s + r.pct, 0) / chunk.length;
+        const d = new Date(chunk[chunk.length - 1].t);
+        labels.push(PERIOD === 'hoje' || PERIOD === '24h' ? hhmm(d) : `${ddmm(d)} ${hhmm(d)}`);
+        values.push(Math.round(pct * 10) / 10);
+      }
+      initChart(labels, values);
+    }
+
+    function setPeriod(btn, p) {
+      document.querySelectorAll('.pill').forEach(x => x.classList.remove('active'));
+      btn.classList.add('active');
+      PERIOD = p;
+      renderPeriod();
+    }
+
+    // ===== Bluetooth (leitura ao vivo) =====
+    // Premissa: o firmware envia a DISTÂNCIA sensor→água em cm (mesma grandeza que ?cm= da planilha).
     async function connectBLE() {
       if (!navigator.bluetooth) {
         alert("Abra este aplicativo no Android com Chrome atualizado para usar o Bluetooth BLE.");
         return;
       }
       try {
-        if ("Notification" in window && Notification.permission !== "granted") {
-          await Notification.requestPermission();
-        }
-
-        const MEUS_SERVICOS_BLE = [
+        if ("Notification" in window && Notification.permission !== "granted") await Notification.requestPermission();
+        const SERVICOS = [
           '4fafc201-1fb5-459e-8fcc-c5c9c331914b',
           '6e400001-b5a3-f393-e0a9-e50e24dcca9e',
           '0000ffe0-0000-1000-8000-00805f9b34fb',
           '0000181a-0000-1000-8000-00805f9b34fb'
         ];
-
-        const device = await navigator.bluetooth.requestDevice({
-          acceptAllDevices: true,
-          optionalServices: MEUS_SERVICOS_BLE
-        });
-
+        const device = await navigator.bluetooth.requestDevice({ acceptAllDevices: true, optionalServices: SERVICOS });
         device.addEventListener('gattserverdisconnected', () => {
           document.getElementById('bleBtn').classList.remove('ble-active');
           document.getElementById('liveTag').style.display = 'none';
+          bleLastTs = 0;
         });
-
         const server = await device.gatt.connect();
         document.getElementById('bleBtn').classList.add('ble-active');
         document.getElementById('liveTag').style.display = 'inline';
 
-        const processarDadoBLE = (dataView) => {
-          let txt = new TextDecoder().decode(dataView).trim();
-          const match = txt.replace(',', '.').match(/[\d.]+/);
-          let val = match ? parseFloat(match[0]) : NaN;
-
-          if (isNaN(val) && dataView.byteLength > 0) {
-            val = dataView.getUint8(0);
-          }
-
-          if (!isNaN(val)) {
-            const cm = val;
-            const liters = (cm / MAX_CM) * MAX_LITERS;
-            const pct = (liters / MAX_LITERS) * 100;
-            updateDisplay(cm, liters, pct);
-          }
+        const processar = (dv) => {
+          const txt = new TextDecoder().decode(dv).trim();
+          const m = txt.replace(',', '.').match(/\d+(\.\d+)?/);
+          let dist = m ? parseFloat(m[0]) : NaN;
+          if (isNaN(dist) && dv.byteLength > 0) dist = dv.getUint8(0);
+          if (isNaN(dist) || dist < 20 || dist > 110) return;   // mesma faixa válida do firmware
+          const altura = Math.max(0, Math.min(LIMITE_ALTURA_CM, DIST_VAZIA_CM - dist));
+          const litros = litrosPorAltura(altura);
+          const pct = Math.min(100, Math.max(0, (litros / litrosPorAltura(ALTURA_MAX_CM)) * 100));
+          bleLastTs = Date.now();
+          updateDisplay(altura, litros, pct);
         };
 
         const services = await server.getPrimaryServices();
@@ -380,16 +439,12 @@
           for (const c of chars) {
             if (c.properties.notify || c.properties.indicate) {
               await c.startNotifications();
-              c.addEventListener('characteristicvaluechanged', e => processarDadoBLE(e.target.value));
+              c.addEventListener('characteristicvaluechanged', e => processar(e.target.value));
             }
             if (c.properties.read) {
-              const initialVal = await c.readValue();
-              processarDadoBLE(initialVal);
+              processar(await c.readValue());
               setInterval(async () => {
-                if (device.gatt.connected) {
-                  const v = await c.readValue();
-                  processarDadoBLE(v);
-                }
+                if (device.gatt.connected) { try { processar(await c.readValue()); } catch (e) {} }
               }, 2000);
             }
           }
@@ -399,26 +454,21 @@
       }
     }
 
-    function setPeriod(btn, label) {
-      document.querySelectorAll('.pill').forEach(p => p.classList.remove('active'));
-      btn.classList.add('active');
-      document.getElementById('consRange').innerText = `${label} • Atualizado`;
-    }
+    // ===== Configurações =====
     function openSettings() { document.getElementById('settingsModal').style.display = 'flex'; }
     function closeSettings() { document.getElementById('settingsModal').style.display = 'none'; }
     function saveSettings() {
       API_URL = document.getElementById('apiInput').value.trim();
-      MAX_LITERS = parseFloat(document.getElementById('maxLitersInput').value) || 1000;
-      MAX_CM = parseFloat(document.getElementById('maxCmInput').value) || 100;
+      TOKEN = document.getElementById('tokenInput').value.trim();
       localStorage.setItem('api_url', API_URL);
-      localStorage.setItem('max_liters', MAX_LITERS);
-      localStorage.setItem('max_cm', MAX_CM);
+      localStorage.setItem('api_token', TOKEN);
       closeSettings();
       fetchSheetData();
     }
 
     window.onload = () => {
       initChart();
+      if (!API_URL || !TOKEN) openSettings();
       fetchSheetData();
       setInterval(fetchSheetData, 60000);
     };
