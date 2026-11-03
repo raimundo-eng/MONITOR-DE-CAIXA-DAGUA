@@ -105,6 +105,7 @@
           <div class="trend-caption">(últimas 3 leituras)</div>
         </div>
       </div>
+      <div id="bleInfo" style="font-size:11px;color:#64748b;margin-top:10px;"></div>
     </div>
 
     <div class="card">
@@ -415,60 +416,102 @@
     }
 
     // ===== Bluetooth (leitura ao vivo) =====
-    // Premissa: o firmware envia a DISTÂNCIA sensor→água em cm (mesma grandeza que ?cm= da planilha).
+    // Premissa: o firmware envia a DISTÂNCIA sensor→água em cm (texto, ex.: "25.3"), via BLE (GATT).
+    let bleDevice = null, blePoll = null, bleTimer = null, bleRetries = 0;
+    const bleInfo = msg => { document.getElementById('bleInfo').innerText = msg; };
+
+    function processarBLE(dv) {
+      let dist = NaN, bruto;
+      if (dv.byteLength === 1) { dist = dv.getUint8(0); bruto = String(dist); }
+      else {
+        bruto = new TextDecoder().decode(dv).trim();
+        const m = bruto.replace(',', '.').match(/\d+(\.\d+)?/);
+        if (m) dist = parseFloat(m[0]);
+      }
+      if (isNaN(dist)) {
+        const hex = Array.from(new Uint8Array(dv.buffer, dv.byteOffset, dv.byteLength)).map(x => x.toString(16).padStart(2, '0')).join(' ');
+        bleInfo('BLE: formato não reconhecido (bytes: ' + hex + ')');
+        return;
+      }
+      if (dist < 20 || dist > 110) {          // mesma faixa válida do firmware/planilha
+        bleInfo(`BLE: valor ${fmt(dist)} fora da faixa 20–110 cm (recebido: "${bruto}")`);
+        return;
+      }
+      const altura = Math.max(0, Math.min(LIMITE_ALTURA_CM, DIST_VAZIA_CM - dist));
+      const litros = litrosPorAltura(altura);
+      const pct = Math.min(100, Math.max(0, (litros / litrosPorAltura(ALTURA_MAX_CM)) * 100));
+      bleLastTs = Date.now();
+      updateDisplay(altura, litros, pct);
+      bleInfo(`BLE ao vivo: distância ${fmt(dist)} cm • ${hhmm(new Date())}`);
+    }
+
+    async function iniciarBLE(device) {
+      const server = await device.gatt.connect();
+      const services = await server.getPrimaryServices();
+      const lerPorPolling = [];
+      let achou = 0;
+      for (const service of services) {
+        const chars = await service.getCharacteristics();
+        for (const c of chars) {
+          if (c.properties.notify || c.properties.indicate) {
+            await c.startNotifications();
+            c.addEventListener('characteristicvaluechanged', e => processarBLE(e.target.value));
+            achou++;
+          } else if (c.properties.read) {
+            lerPorPolling.push(c);
+            achou++;
+          }
+        }
+      }
+      if (!achou) throw new Error('nenhuma característica de leitura/notificação encontrada nos serviços permitidos');
+      clearInterval(blePoll);
+      if (lerPorPolling.length) {
+        const ler = async () => { for (const c of lerPorPolling) { try { processarBLE(await c.readValue()); } catch (e) {} } };
+        await ler();
+        blePoll = setInterval(ler, 2000);
+      }
+      document.getElementById('bleBtn').classList.add('ble-active');
+      document.getElementById('liveTag').style.display = 'inline';
+      bleRetries = 0;
+    }
+
+    function aoDesconectarBLE() {
+      clearInterval(blePoll); blePoll = null;
+      document.getElementById('bleBtn').classList.remove('ble-active');
+      document.getElementById('liveTag').style.display = 'none';
+      bleLastTs = 0;
+      if (!bleDevice || bleTimer) return;
+      if (bleRetries >= 5) { bleInfo('BLE desconectado. Toque em ᛒ para conectar de novo.'); return; }
+      bleRetries++;
+      bleInfo(`BLE desconectado. Reconectando (${bleRetries}/5)…`);
+      bleTimer = setTimeout(async () => {
+        bleTimer = null;
+        try { await iniciarBLE(bleDevice); } catch (e) { aoDesconectarBLE(); }
+      }, 3000);
+    }
+
     async function connectBLE() {
       if (!navigator.bluetooth) {
         alert("Abra este aplicativo no Android com Chrome atualizado para usar o Bluetooth BLE.");
         return;
       }
       try {
-        if ("Notification" in window && Notification.permission !== "granted") await Notification.requestPermission();
         const SERVICOS = [
           '4fafc201-1fb5-459e-8fcc-c5c9c331914b',
           '6e400001-b5a3-f393-e0a9-e50e24dcca9e',
           '0000ffe0-0000-1000-8000-00805f9b34fb',
           '0000181a-0000-1000-8000-00805f9b34fb'
         ];
+        // requestDevice PRIMEIRO: exige gesto recente do usuário (um prompt antes dele pode invalidar o gesto)
         const device = await navigator.bluetooth.requestDevice({ acceptAllDevices: true, optionalServices: SERVICOS });
-        device.addEventListener('gattserverdisconnected', () => {
-          document.getElementById('bleBtn').classList.remove('ble-active');
-          document.getElementById('liveTag').style.display = 'none';
-          bleLastTs = 0;
-        });
-        const server = await device.gatt.connect();
-        document.getElementById('bleBtn').classList.add('ble-active');
-        document.getElementById('liveTag').style.display = 'inline';
-
-        const processar = (dv) => {
-          const txt = new TextDecoder().decode(dv).trim();
-          const m = txt.replace(',', '.').match(/\d+(\.\d+)?/);
-          let dist = m ? parseFloat(m[0]) : NaN;
-          if (isNaN(dist) && dv.byteLength > 0) dist = dv.getUint8(0);
-          if (isNaN(dist) || dist < 20 || dist > 110) return;   // mesma faixa válida do firmware
-          const altura = Math.max(0, Math.min(LIMITE_ALTURA_CM, DIST_VAZIA_CM - dist));
-          const litros = litrosPorAltura(altura);
-          const pct = Math.min(100, Math.max(0, (litros / litrosPorAltura(ALTURA_MAX_CM)) * 100));
-          bleLastTs = Date.now();
-          updateDisplay(altura, litros, pct);
-        };
-
-        const services = await server.getPrimaryServices();
-        for (const service of services) {
-          const chars = await service.getCharacteristics();
-          for (const c of chars) {
-            if (c.properties.notify || c.properties.indicate) {
-              await c.startNotifications();
-              c.addEventListener('characteristicvaluechanged', e => processar(e.target.value));
-            }
-            if (c.properties.read) {
-              processar(await c.readValue());
-              setInterval(async () => {
-                if (device.gatt.connected) { try { processar(await c.readValue()); } catch (e) {} }
-              }, 2000);
-            }
-          }
-        }
+        if (bleDevice) bleDevice.removeEventListener('gattserverdisconnected', aoDesconectarBLE);
+        bleDevice = device; bleRetries = 0;
+        device.addEventListener('gattserverdisconnected', aoDesconectarBLE);
+        if ("Notification" in window && Notification.permission === "default") Notification.requestPermission();
+        bleInfo('BLE: conectando…');
+        await iniciarBLE(device);
       } catch (err) {
+        bleInfo('BLE: falha — ' + err.message);
         alert("Conexão BLE não concluída: " + err.message);
       }
     }
