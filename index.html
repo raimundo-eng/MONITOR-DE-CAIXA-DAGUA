@@ -280,13 +280,36 @@
     }
 
     // ===== Nuvem (Google Sheets via Apps Script) =====
+    function parseTs(v) {
+      if (typeof v === 'number' && !isNaN(v)) {
+        return v < 1e11 ? v * 1000 : v; // converte segundos para ms se necessário
+      }
+      if (typeof v === 'string') {
+        const s = v.trim();
+        if (/^\d+(\.\d+)?$/.test(s)) {
+          const n = Number(s);
+          return n < 1e11 ? n * 1000 : n;
+        }
+        // Formato brasileiro DD/MM/YYYY HH:mm(:ss)
+        const m = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2,4})(?:[\s,T]+(\d{1,2}):(\d{1,2})(?::(\d{1,2}))?)?/);
+        if (m) {
+          let yr = parseInt(m[3], 10);
+          if (yr < 100) yr += 2000;
+          return new Date(yr, parseInt(m[2], 10) - 1, parseInt(m[1], 10), parseInt(m[4] || 0, 10), parseInt(m[5] || 0, 10), parseInt(m[6] || 0, 10)).getTime();
+        }
+        const p = Date.parse(s);
+        if (!isNaN(p)) return p;
+      }
+      return NaN;
+    }
+
     async function fetchSheetData() {
       if (!API_URL || !TOKEN) { setStatus('Configure a URL e o token em ☰ / Configurações.', false); return; }
       let data;
       try {
         const url = new URL(API_URL);
         url.searchParams.set('acao', 'dados');
-        url.searchParams.set('n', '3000');
+        url.searchParams.set('n', '10000');
         url.searchParams.set('token', TOKEN);
         const res = await fetch(url.toString(), { cache: 'no-store', redirect: 'follow' });
         const txt = await res.text();
@@ -303,7 +326,13 @@
       }
       setStatus('Atualizado às ' + hhmm(new Date()), false);
       LITROS_MAX = data.litrosMax || LITROS_MAX;
-      READINGS = (data.leituras || []).slice().sort((a, b) => a.t - b.t);
+      READINGS = (data.leituras || []).map(r => ({
+        ...r,
+        t: parseTs(r.t ?? r.timestamp ?? r.data),
+        altura: Number(String(r.altura ?? 0).replace(',', '.')),
+        litros: Number(String(r.litros ?? 0).replace(',', '.')),
+        pct: Number(String(r.pct ?? 0).replace(',', '.'))
+      })).filter(r => !isNaN(r.t) && !isNaN(r.litros)).sort((a, b) => a.t - b.t);
       render();
     }
 
@@ -348,17 +377,15 @@
 
     function periodStart() {
       const now = new Date();
-      if (PERIOD === 'hoje') return new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+      if (PERIOD === 'hoje') return new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0).getTime();
       if (PERIOD === '24h')  return now.getTime() - 24 * 3600e3;
       if (PERIOD === '7d')   return now.getTime() - 7 * 86400e3;
       return now.getTime() - 30 * 86400e3;
     }
 
-    // Consumo = soma das descidas de nível, descontando ruído do sensor e reabastecimentos.
-    // 1) mediana de 3 leituras vizinhas tira picos isolados;
-    // 2) histerese: só confirma mudança quando o nível se afasta da referência por mais que a BANDA.
-    //    Descida confirmada = consumo; subida confirmada = reabastecimento (não conta).
-    const BANDA_L = 15;   // ≈ 1,5 cm de altura na faixa útil da caixa
+    // Consumo = soma das descidas de nível dentro do período, descontando ruído de 1 leitura e reabastecimentos.
+    // Usa histerese leve (3 L) para ignorar micro-oscilações do sensor sem engolir consumos reais do dia a dia.
+    const BANDA_L = 3;
     function calcConsumo(rows) {
       if (rows.length < 2) return 0;
       const sm = rows.map((r, i) => {
@@ -367,8 +394,13 @@
       });
       let ref = sm[0], consumo = 0;
       for (let i = 1; i < sm.length; i++) {
-        if (sm[i] <= ref - BANDA_L) { consumo += ref - sm[i]; ref = sm[i]; }
-        else if (sm[i] >= ref + BANDA_L) { ref = sm[i]; }
+        const diff = sm[i] - ref;
+        if (diff <= -BANDA_L) {
+          consumo += (ref - sm[i]);
+          ref = sm[i];
+        } else if (diff >= BANDA_L) {
+          ref = sm[i]; // subiu (reabastecimento): atualiza o topo de referência sem somar consumo
+        }
       }
       return consumo;
     }
@@ -378,12 +410,22 @@
       const LABEL = { hoje: 'Hoje', '24h': 'Últimas 24 h', '7d': '7 dias', '30d': '30 dias' }[PERIOD];
       const idx = READINGS.findIndex(r => r.t >= t0);
       const rows = idx < 0 ? [] : READINGS.slice(idx);
-      // inclui a última leitura ANTES do início como ponto de partida (senão perde o trecho inicial)
-      const base = idx > 0 ? READINGS.slice(idx - 1) : rows;
 
-      if (rows.length < 2) {
-        document.getElementById('consTotal').innerHTML = '-- L <span>consumidos</span>';
-        document.getElementById('consRange').innerText = `${LABEL} • dados insuficientes`;
+      // Para 'hoje', filtra estritamente as leituras de hoje (00:00 em diante, sem puxar leitura de ontem).
+      // Para '24h', '7d' e '30d', se houver leitura anterior à janela, interpola o nível exato no instante t0
+      // para capturar o consumo na fronteira sem importar o consumo anterior ao período.
+      let base = rows;
+      if (PERIOD !== 'hoje' && idx > 0 && rows.length > 0) {
+        const prev = READINGS[idx - 1], first = rows[0];
+        const dt = first.t - prev.t;
+        const frac = dt > 0 ? Math.max(0, Math.min(1, (t0 - prev.t) / dt)) : 1;
+        const litrosT0 = prev.litros + (first.litros - prev.litros) * frac;
+        base = [{ ...prev, t: t0, litros: litrosT0 }, ...rows];
+      }
+
+      if (rows.length === 0) {
+        document.getElementById('consTotal').innerHTML = '0 L <span>consumidos</span>';
+        document.getElementById('consRange').innerText = `${LABEL} • sem leituras no período`;
         initChart([], []);
         return;
       }
@@ -391,8 +433,13 @@
       const consumo = calcConsumo(base);
       document.getElementById('consTotal').innerHTML = `${Math.round(consumo)} L <span>consumidos</span>`;
       const a = new Date(rows[0].t), b = new Date(rows[rows.length - 1].t);
-      let faixa = `${LABEL} • ${ddmm(a)} ${hhmm(a)} – ${ddmm(b)} ${hhmm(b)}`;
-      if (READINGS[0].t > t0 + 3600e3) faixa += ` • só há dados desde ${ddmm(new Date(READINGS[0].t))}`;
+      const rangeStr = PERIOD === 'hoje'
+        ? `${hhmm(a)} – ${hhmm(b)}`
+        : `${ddmm(a)} ${hhmm(a)} – ${ddmm(b)} ${hhmm(b)}`;
+      let faixa = `${LABEL} • ${rangeStr}`;
+      if (PERIOD !== 'hoje' && READINGS[0].t > t0 + 3600e3) {
+        faixa += ` • dados desde ${ddmm(new Date(READINGS[0].t))}`;
+      }
       document.getElementById('consRange').innerText = faixa;
 
       // Reduz a no máximo ~48 pontos (média por faixa)
@@ -402,7 +449,7 @@
         const chunk = rows.slice(i, i + step);
         const pct = chunk.reduce((s, r) => s + r.pct, 0) / chunk.length;
         const d = new Date(chunk[chunk.length - 1].t);
-        labels.push(PERIOD === 'hoje' || PERIOD === '24h' ? hhmm(d) : `${ddmm(d)} ${hhmm(d)}`);
+        labels.push(PERIOD === 'hoje' ? hhmm(d) : (PERIOD === '24h' ? `${ddmm(d)} ${hhmm(d)}` : `${ddmm(d)} ${hhmm(d)}`));
         values.push(Math.round(pct * 10) / 10);
       }
       initChart(labels, values);
