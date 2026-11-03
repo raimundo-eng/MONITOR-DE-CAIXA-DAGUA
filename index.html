@@ -285,7 +285,7 @@
       try {
         const url = new URL(API_URL);
         url.searchParams.set('acao', 'dados');
-        url.searchParams.set('n', '1000');
+        url.searchParams.set('n', '3000');
         url.searchParams.set('token', TOKEN);
         const res = await fetch(url.toString(), { cache: 'no-store', redirect: 'follow' });
         const txt = await res.text();
@@ -353,10 +353,32 @@
       return now.getTime() - 30 * 86400e3;
     }
 
+    // Consumo = soma das descidas de nível, descontando ruído do sensor e reabastecimentos.
+    // 1) mediana de 3 leituras vizinhas tira picos isolados;
+    // 2) histerese: só confirma mudança quando o nível se afasta da referência por mais que a BANDA.
+    //    Descida confirmada = consumo; subida confirmada = reabastecimento (não conta).
+    const BANDA_L = 15;   // ≈ 1,5 cm de altura na faixa útil da caixa
+    function calcConsumo(rows) {
+      if (rows.length < 2) return 0;
+      const sm = rows.map((r, i) => {
+        const v = [rows[Math.max(0, i - 1)].litros, r.litros, rows[Math.min(rows.length - 1, i + 1)].litros];
+        return v.sort((x, y) => x - y)[1];
+      });
+      let ref = sm[0], consumo = 0;
+      for (let i = 1; i < sm.length; i++) {
+        if (sm[i] <= ref - BANDA_L) { consumo += ref - sm[i]; ref = sm[i]; }
+        else if (sm[i] >= ref + BANDA_L) { ref = sm[i]; }
+      }
+      return consumo;
+    }
+
     function renderPeriod() {
       const t0 = periodStart();
-      const rows = READINGS.filter(r => r.t >= t0);
       const LABEL = { hoje: 'Hoje', '24h': 'Últimas 24 h', '7d': '7 dias', '30d': '30 dias' }[PERIOD];
+      const idx = READINGS.findIndex(r => r.t >= t0);
+      const rows = idx < 0 ? [] : READINGS.slice(idx);
+      // inclui a última leitura ANTES do início como ponto de partida (senão perde o trecho inicial)
+      const base = idx > 0 ? READINGS.slice(idx - 1) : rows;
 
       if (rows.length < 2) {
         document.getElementById('consTotal').innerHTML = '-- L <span>consumidos</span>';
@@ -365,15 +387,12 @@
         return;
       }
 
-      // Consumo = soma das quedas entre leituras (ignora subidas = reabastecimento e ruído < 3 L)
-      let consumo = 0;
-      for (let i = 1; i < rows.length; i++) {
-        const d = rows[i].litros - rows[i - 1].litros;
-        if (d < -3) consumo += -d;
-      }
+      const consumo = calcConsumo(base);
       document.getElementById('consTotal').innerHTML = `${Math.round(consumo)} L <span>consumidos</span>`;
       const a = new Date(rows[0].t), b = new Date(rows[rows.length - 1].t);
-      document.getElementById('consRange').innerText = `${LABEL} • ${ddmm(a)} ${hhmm(a)} – ${ddmm(b)} ${hhmm(b)}`;
+      let faixa = `${LABEL} • ${ddmm(a)} ${hhmm(a)} – ${ddmm(b)} ${hhmm(b)}`;
+      if (READINGS[0].t > t0 + 3600e3) faixa += ` • só há dados desde ${ddmm(new Date(READINGS[0].t))}`;
+      document.getElementById('consRange').innerText = faixa;
 
       // Reduz a no máximo ~48 pontos (média por faixa)
       const maxPts = 48, step = Math.ceil(rows.length / maxPts);

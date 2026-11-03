@@ -1,4 +1,4 @@
-const CACHE_NAME = 'caixa-dagua-v2';
+const CACHE_NAME = 'caixa-dagua-v3';
 const ASSETS = [
   './',
   './index.html',
