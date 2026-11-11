@@ -367,8 +367,8 @@
         document.getElementById('freqBadge').innerText = dt < 90 ? `A cada ~${Math.round(dt)} min` : `A cada ~${fmt(dt / 60)} h`;
       }
 
-      // Leituras recentes (mais nova primeiro), até 100, com rolagem
-      const MAX_LINHAS = 100;
+      // Leituras recentes (mais nova primeiro), até 10000, com rolagem
+      const MAX_LINHAS = 10000;
       const linhas = [];
       for (let i = READINGS.length - 1; i >= Math.max(0, READINGS.length - MAX_LINHAS); i--) {
         const r = READINGS[i], prev = READINGS[i - 1];
